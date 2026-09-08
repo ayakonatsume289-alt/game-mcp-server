@@ -1,0 +1,13 @@
+{
+  "name": "game-mcp-server",
+  "version": "0.1.0",
+  "description": "Multiplayer game MCP server with web frontend - Gomoku (Five in a Row)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "uuid": "^10.0.0"
+  }
+}
