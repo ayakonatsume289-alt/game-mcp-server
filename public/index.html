@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>棋局</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background: #f5efe6;
+      color: #3d3429;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      width: 100%;
+      max-width: 480px;
+      padding: 24px 20px 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #3d3429;
+      letter-spacing: 1px;
+    }
+    .status-bar {
+      font-size: 13px;
+      color: #9b8e7e;
+      margin-top: 6px;
+      min-height: 18px;
+      transition: color 0.3s;
+    }
+    .status-bar.highlight {
+      color: #c67b45;
+      font-weight: 500;
+    }
+
+    .setup-panel {
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      border-radius: 14px;
+      padding: 24px 20px;
+      margin: 16px 16px 0;
+      width: calc(100% - 32px);
+      max-width: 400px;
+    }
+    .setup-panel label {
+      display: block;
+      font-size: 12px;
+      color: #9b8e7e;
+      margin-bottom: 5px;
+      margin-top: 16px;
+    }
+    .setup-panel label:first-child { margin-top: 0; }
+    .setup-panel input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd5c9;
+      background: #faf7f2;
+      color: #3d3429;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .setup-panel input:focus { border-color: #c6a882; }
+
+    .btn {
+      display: inline-block;
+      padding: 11px 28px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #c67b45;
+      color: #fff;
+      margin-top: 20px;
+      width: 100%;
+    }
+    .btn-primary:hover { background: #b56c38; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-ghost {
+      padding: 6px 14px;
+      font-size: 12px;
+      background: transparent;
+      color: #9b8e7e;
+      border: 1px solid #ddd5c9;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-ghost:hover { background: #f0e9de; }
+
+    .game-area {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .game-info {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 16px 0 10px;
+      font-size: 13px;
+    }
+    .player-tag {
+      padding: 5px 14px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      color: #6b5e50;
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+    .player-tag.active {
+      background: #3d3429;
+      border-color: #3d3429;
+      color: #f5efe6;
+    }
+    .vs-label { color: #c6b9a8; font-size: 12px; }
+
+    .board-wrap {
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 2px 12px rgba(120, 100, 70, 0.06);
+    }
+    .board-canvas {
+      display: block;
+      touch-action: none;
+      border-radius: 6px;
+    }
+
+    .move-list {
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 12px 16px 16px;
+      width: calc(100% - 32px);
+      max-width: 400px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 12px;
+      color: #9b8e7e;
+      line-height: 1.9;
+    }
+    .move-list::-webkit-scrollbar { width: 4px; }
+    .move-list::-webkit-scrollbar-thumb { background: #ddd5c9; border-radius: 2px; }
+
+    .footer-info {
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 0 16px 24px;
+      width: calc(100% - 32px);
+      max-width: 400px;
+      font-size: 11px;
+      color: #b0a494;
+      line-height: 1.9;
+    }
+    .footer-info code {
+      background: #f5efe6;
+      padding: 2px 7px;
+      border-radius: 5px;
+      color: #8a7d6d;
+      font-size: 11px;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>五子棋</h1>
+    <div class="status-bar" id="statusBar">创建游戏开始对弈</div>
+  </div>
+
+  <div class="setup-panel" id="setupPanel">
+    <label>玩家 1 · 黑棋 ●</label>
+    <input id="player1" type="text" value="菲菲" placeholder="输入名字">
+    <label>玩家 2 · 白棋 ○</label>
+    <input id="player2" type="text" value="夜声" placeholder="输入名字">
+    <button class="btn btn-primary" id="btnCreate" onclick="createGame()">开始对弈</button>
+  </div>
+
+  <div id="gameArea" class="game-area hidden">
+    <div class="game-info">
+      <span class="player-tag" id="tag0">● 菲菲</span>
+      <span class="vs-label">vs</span>
+      <span class="player-tag" id="tag1">○ 夜声</span>
+      <button class="btn-ghost" onclick="resetGame()">新游戏</button>
+    </div>
+    <div class="board-wrap">
+      <canvas id="boardCanvas" class="board-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="move-list hidden" id="moveList"></div>
+
+  <div class="footer-info">
+    MCP 接入 <code id="mcpUrl">加载中...</code><br>
+    AI 通过 <code>create_game</code> <code>get_game_state</code> <code>make_move</code> 参与对弈
+  </div>
+
+<script>
+  let gameId = null;
+  let gameState = null;
+  let pollTimer = null;
+  let moveLog = [];
+
+  const SIZE = 15;
+  const CELL = Math.min(28, Math.floor((window.innerWidth - 80) / (SIZE - 1)));
+  const PAD = 22;
+  const CANVAS_SIZE = CELL * (SIZE - 1) + PAD * 2;
+
+  document.getElementById('mcpUrl').textContent = location.origin + '/mcp';
+
+  const canvas = document.getElementById('boardCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function initCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = CANVAS_SIZE * dpr;
+    canvas.height = CANVAS_SIZE * dpr;
+    canvas.style.width = CANVAS_SIZE + 'px';
+    canvas.style.height = CANVAS_SIZE + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawBoard(board, lastMove) {
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    // Wood board
+    ctx.fillStyle = '#e8cfa0';
+    if (ctx.roundRect) {
+      ctx.beginPath(); ctx.roundRect(0, 0, CANVAS_SIZE, CANVAS_SIZE, 6); ctx.fill();
+    } else {
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    }
+
+    // Grain texture
+    ctx.strokeStyle = 'rgba(180, 140, 80, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < CANVAS_SIZE; i += 7) {
+      ctx.beginPath();
+      ctx.moveTo(0, i + Math.sin(i * 0.1) * 2);
+      ctx.lineTo(CANVAS_SIZE, i + Math.cos(i * 0.08) * 2);
+      ctx.stroke();
+    }
+
+    // Grid
+    ctx.strokeStyle = 'rgba(100, 70, 30, 0.35)';
+    ctx.lineWidth = 0.7;
+    for (let i = 0; i < SIZE; i++) {
+      const p = PAD + i * CELL;
+      ctx.beginPath(); ctx.moveTo(PAD, p); ctx.lineTo(PAD + (SIZE-1)*CELL, p); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p, PAD); ctx.lineTo(p, PAD + (SIZE-1)*CELL); ctx.stroke();
+    }
+
+    // Stars
+    const stars = [3, 7, 11];
+    ctx.fillStyle = 'rgba(100, 70, 30, 0.5)';
+    for (const r of stars) {
+      for (const c of stars) {
+        ctx.beginPath();
+        ctx.arc(PAD + c * CELL, PAD + r * CELL, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Coords
+    ctx.fillStyle = 'rgba(100, 70, 30, 0.4)';
+    ctx.font = `${Math.max(8, CELL * 0.32)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i < SIZE; i++) ctx.fillText(i, PAD + i * CELL, 5);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < SIZE; i++) ctx.fillText(i, PAD - 7, PAD + i * CELL);
+
+    if (!board) return;
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (!board[r][c]) continue;
+        const x = PAD + c * CELL;
+        const y = PAD + r * CELL;
+        const isBlack = gameState && board[r][c] === gameState.players[0];
+        const rad = CELL * 0.42;
+
+        // Shadow
+        ctx.beginPath();
+        ctx.arc(x + 1.5, y + 1.5, rad, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.13)';
+        ctx.fill();
+
+        // Stone
+        ctx.beginPath();
+        ctx.arc(x, y, rad, 0, Math.PI * 2);
+        if (isBlack) {
+          const g = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, rad);
+          g.addColorStop(0, '#4a4a4a');
+          g.addColorStop(1, '#1a1a1a');
+          ctx.fillStyle = g;
+        } else {
+          const g = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, rad);
+          g.addColorStop(0, '#ffffff');
+          g.addColorStop(1, '#d8d0c4');
+          ctx.fillStyle = g;
+        }
+        ctx.fill();
+        ctx.strokeStyle = isBlack ? 'rgba(0,0,0,0.3)' : 'rgba(150,140,120,0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+
+    // Last move dot
+    if (lastMove) {
+      const lx = PAD + lastMove.col * CELL;
+      const ly = PAD + lastMove.row * CELL;
+      const isBlack = gameState && lastMove.player === gameState.players[0];
+      ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  canvas.addEventListener('click', (e) => {
+    if (!gameState || gameState.status !== 'playing') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    const col = Math.round((x - PAD) / CELL);
+    const row = Math.round((y - PAD) / CELL);
+    if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return;
+    if (gameState.board[row][col]) return;
+    placeMove(row, col);
+  });
+
+  async function createGame() {
+    const p1 = document.getElementById('player1').value.trim() || '玩家1';
+    const p2 = document.getElementById('player2').value.trim() || '玩家2';
+    const res = await fetch('/api/games', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameType: 'gomoku', players: [p1, p2] })
+    });
+    const data = await res.json();
+    if (data.error) { setStatus(data.error); return; }
+    gameId = data.gameId;
+    gameState = data.game;
+    moveLog = [];
+    showGame();
+    startPolling();
+  }
+
+  async function placeMove(row, col) {
+    if (!gameState) return;
+    const res = await fetch(`/api/games/${gameId}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player: gameState.currentPlayer, row, col })
+    });
+    const data = await res.json();
+    if (data.error) { setStatus(data.error); return; }
+    await refreshState();
+  }
+
+  async function refreshState() {
+    if (!gameId) return;
+    const res = await fetch(`/api/games/${gameId}`);
+    const s = await res.json();
+    if (s.moveCount > (gameState ? gameState.moveCount : 0) && s.lastMove) {
+      moveLog.push(s.lastMove);
+    }
+    gameState = s;
+    updateUI();
+  }
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      if (!gameId) return;
+      await refreshState();
+      if (gameState && gameState.status === 'finished') clearInterval(pollTimer);
+    }, 2000);
+  }
+
+  function showGame() {
+    document.getElementById('setupPanel').classList.add('hidden');
+    document.getElementById('gameArea').classList.remove('hidden');
+    document.getElementById('moveList').classList.remove('hidden');
+    updateUI();
+  }
+
+  function updateUI() {
+    if (!gameState) return;
+    const { players, currentPlayer, status, winner, lastMove } = gameState;
+    const tag0 = document.getElementById('tag0');
+    const tag1 = document.getElementById('tag1');
+    tag0.textContent = `● ${players[0]}`;
+    tag1.textContent = `○ ${players[1]}`;
+    tag0.className = 'player-tag' + (currentPlayer === players[0] && status === 'playing' ? ' active' : '');
+    tag1.className = 'player-tag' + (currentPlayer === players[1] && status === 'playing' ? ' active' : '');
+    if (status === 'finished') {
+      setStatus(winner ? `${winner} 获胜 🎉` : '平局', true);
+    } else {
+      setStatus(`轮到 ${currentPlayer}`);
+    }
+    drawBoard(gameState.board, lastMove);
+    const listEl = document.getElementById('moveList');
+    listEl.textContent = moveLog.map((m, i) =>
+      `${i + 1}. ${m.player} (${m.symbol}) → ${m.row}, ${m.col}`
+    ).join('\n');
+    listEl.scrollTop = listEl.scrollHeight;
+  }
+
+  function setStatus(text, hl = false) {
+    const el = document.getElementById('statusBar');
+    el.textContent = text;
+    el.className = 'status-bar' + (hl ? ' highlight' : '');
+  }
+
+  function resetGame() {
+    if (pollTimer) clearInterval(pollTimer);
+    gameId = null; gameState = null; moveLog = [];
+    document.getElementById('setupPanel').classList.remove('hidden');
+    document.getElementById('gameArea').classList.add('hidden');
+    document.getElementById('moveList').classList.add('hidden');
+    document.getElementById('moveList').textContent = '';
+    setStatus('创建游戏开始对弈');
+    initCanvas(); drawBoard(null);
+  }
+
+  initCanvas();
+  drawBoard(null);
+</script>
+</body>
+</html>
